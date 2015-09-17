@@ -235,7 +235,7 @@ static int has_free_ports_loc(struct local_intf *loc, unsigned int num_ports) {
 		ilog(LOG_ERR, "has_free_ports_loc - NULL local interface");
 		return 0;
 	}
-	
+
 	if (num_ports > loc->spec->port_pool.free_ports) {
 		ilog(LOG_ERR, "Didn't found %d ports available for %.*s/%s",
 			num_ports, loc->logical->name.len, loc->logical->name.s,
@@ -295,7 +295,7 @@ static int has_free_ports_log_all(struct logical_intf *log, unsigned int num_por
 	return 1;
 }
 
-/* run round-robin-calls algorithm */ 
+/* run round-robin-calls algorithm */
 static struct logical_intf* run_round_robin_calls(GQueue *q, unsigned int num_ports) {
 	struct logical_intf *log = NULL;
 	volatile unsigned int nr_tries = 0;
@@ -338,7 +338,7 @@ select_log:
 	// 2 streams	=> 4 x get_logical_interface calls at offer
 	selection_count ++;
 	if (selection_count % (num_ports / 2) == 0) {
-		selection_count = 0; 
+		selection_count = 0;
 		selection_index ++;
 		selection_index = selection_index % nr_logs;
 	}
@@ -830,6 +830,8 @@ void kernelize(struct packet_stream *stream) {
 
 	if (PS_ISSET(stream, KERNELIZED))
 		return;
+	if (PS_ISSET(stream, FORCE_DAEMON_MODE))
+		return;
 	if (cm->conf.kernelid < 0)
 		goto no_kernel;
 	nk_warn_msg = "interface to kernel module not open";
@@ -934,6 +936,8 @@ void __unkernelize(struct packet_stream *p) {
 		return;
 	if (PS_ISSET(p, NO_KERNEL_SUPPORT))
 		return;
+	if (PS_ISSET(p, FORCE_DAEMON_MODE))
+		return;
 
 	if (p->call->callmaster->conf.kernelfd >= 0) {
 		__re_address_translate_ep(&rea, &p->selected_sfd->socket.local);
@@ -1019,6 +1023,8 @@ static int stream_packet(struct stream_fd *sfd, str *s, const endpoint_t *fsin) 
 	int ret = 0, update = 0, stun_ret = 0, handler_ret = 0, muxed_rtcp = 0, rtcp = 0,
 	    unk = 0;
 	int i;
+	// XXEGREEN... This makes me nervous.
+	int recording_fd = sfd->stream->media->monologue->recording_fd;
 	struct call *call;
 	struct callmaster *cm;
 	/*unsigned char cc;*/
@@ -1138,7 +1144,6 @@ loop_ok:
 		}
 	}
 
-
 	/* do we have somewhere to forward it to? */
 
 	if (!sink || !sink->selected_sfd || !out_srtp->selected_sfd || !in_srtp->selected_sfd) {
@@ -1168,8 +1173,24 @@ loop_ok:
 
 	/* return values are: 0 = forward packet, -1 = error/dont forward,
 	 * 1 = forward and push update to redis */
-	if (rwf_in)
+	if (rwf_in) {
 		handler_ret = rwf_in(s, in_srtp);
+		ilog(LOG_INFO, "xxegreen peer address as %s", endpoint_print_buf(fsin));
+	}
+	// This might be the hook that rfuchs might be referring to
+	// ilog(LOG_WARNING, "xxegreen0: %s", s->s);
+	// EGREEN: This is working pretty nicely but we need to remove the first 12 bytes from each packet that it is dumping
+	if (recording_fd && recording_fd != -1) {
+	   // I am aware that we need to do better and that this is a naive approach
+	   int writelen = (s->len)-12;
+	   char towrite[writelen];
+	   memcpy(towrite, &s->s[12], writelen);
+	   write(recording_fd, towrite, writelen);
+
+	   // EGREEN: This is going to happen for every packet. We need to do better
+	   PS_SET(stream, FORCE_DAEMON_MODE);
+	}
+
 	if (handler_ret >= 0) {
 		if (rtcp && _log_facility_rtcp)
 			parse_and_log_rtcp_report(sfd, s->s, s->len);
@@ -1287,6 +1308,7 @@ kernel_check:
 	kernelize(stream);
 
 forward:
+	// ilog(LOG_INFO, "XXEGREENSTREAM: %s", s->s);
 	if (sink)
 		mutex_lock(&sink->out_lock);
 
@@ -1297,6 +1319,8 @@ forward:
 			|| stun_ret || handler_ret < 0)
 		goto drop;
 
+	// s is my packet?
+	ilog(LOG_INFO, "XXEGREEN NOT");
 	ret = socket_sendto(&sink->selected_sfd->socket, s->s, s->len, &sink->endpoint);
 	__C_DBG("Forward to sink endpoint: %s:%d", sockaddr_print_buf(&sink->endpoint.address), sink->endpoint.port);
 
@@ -1356,6 +1380,20 @@ static void stream_fd_readable(int fd, void *p, uintptr_t u) {
 		goto out;
 
 	log_info_stream_fd(sfd);
+
+	/*
+	 * I should be able to create a filedescriptor here for each stream and pass it
+	 * to stream_packet. Each file descriptor should then receive one side of the
+	 * rtp for each call. I fully expect some packets to get dropped using this
+	 * naive method. If we are seeing problems in testing we could use a RAM disk.
+	 */
+
+	//  var egreentmp1[15] = "/tmp" + rand();
+	//  ilog(LOG_INFO, "XXEGREEN: Creting new file descriptor for recording %s", egreentmp1);
+	//  int egreenFD = open(egreentmp1, O_WRONLY | O_CREAT | O_TRUNC);
+	//  char egreentmp[15];
+	//  sprintf(egreentmp, "%d", egreenFD);
+	//  ilog(LOG_INFO, "XXEGREEN: FD created: %s", egreentmp);
 
 	for (iters = 0; ; iters++) {
 #if MAX_RECV_ITERS
@@ -1428,6 +1466,7 @@ struct stream_fd *stream_fd_new(socket_t *fd, struct call *call, const struct lo
 	sfd->call = obj_get(call);
 	sfd->local_intf = lif;
 	g_queue_push_tail(&call->stream_fds, sfd); /* hand over ref */
+	//sfd->recording_fd = recording_fd;
 
 	__C_DBG("stream_fd_new localport=%d", sfd->socket.local.port);
 
