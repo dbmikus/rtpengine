@@ -419,6 +419,7 @@ struct call {
 	unsigned char		tos;
 	char			*created_from;
 	sockaddr_t		created_from_addr;
+	str			*metadata;
 };
 
 struct callmaster_config {

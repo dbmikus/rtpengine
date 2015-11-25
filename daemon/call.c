@@ -2149,6 +2149,9 @@ void call_destroy(struct call *c) {
 		c->recording_pcaps = g_slist_delete_link(c->recording_pcaps, c->recording_pcaps);
 	}
 
+	// TODO - here is where we write out metadata for IPC communication
+	free(c->metadata);
+
 	rwlock_unlock_w(&c->master_lock);
 }
 
