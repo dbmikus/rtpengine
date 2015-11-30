@@ -2152,10 +2152,49 @@ void call_destroy(struct call *c) {
 		c->recording_pcaps = g_slist_delete_link(c->recording_pcaps, c->recording_pcaps);
 	}
 
-	// TODO - here is where we write out metadata for IPC communication
+	meta_file_finish(c);
 	free(c->metadata);
 
 	rwlock_unlock_w(&c->master_lock);
+}
+
+/**
+ * Writes metadata to metafile, closes file, and renames it to finished location.
+ * Returns non-zero for failure.
+ */
+int meta_file_finish(struct call *call) {
+	int return_code = 0;
+
+	if (call->meta_fp != NULL) {
+		fprintf(call->meta_fp, "\n%s\n", call->metadata->s);
+		fclose(call->meta_fp);
+
+		// Get the filename (in between its directory and the file extension)
+		// and move it to the finished file location.
+		// Rename extension to ".txt".
+		int fn_len;
+		char *meta_filename = strrchr(call->meta_filepath->s, '/');
+		char *meta_ext = NULL;
+		if (meta_filename == NULL)
+			meta_filename = call->meta_filepath->s;
+		else
+			meta_filename = meta_filename + 1;
+		// We can always expect a file extension
+		meta_ext = strrchr(meta_filename, '.');
+		fn_len = meta_ext - meta_filename;
+		int prefix_len = 30; // for "/var/spool/rtpengine/metadata/"
+		int ext_len = 4;     // for ".txt"
+		char new_metapath[prefix_len + fn_len + ext_len + 1];
+		snprintf(new_metapath, prefix_len+fn_len+1, "/var/spool/rtpengine/metadata/%s", meta_filename);
+		snprintf(new_metapath + prefix_len+fn_len, ext_len+1, ".txt");
+		return_code = return_code | rename(call->meta_filepath->s, new_metapath);
+	}
+	if (call->meta_filepath != NULL) {
+		free(call->meta_filepath->s);
+		free(call->meta_filepath);
+	}
+
+	return return_code;
 }
 
 
@@ -2259,6 +2298,22 @@ static struct call *call_create(const str *callid, struct callmaster *m) {
 	c->created = poller_now;
 	c->dtls_cert = dtls_cert();
 	c->tos = m->conf.default_tos;
+
+	int rand_bytes = 16;
+	str *meta_filepath = malloc(sizeof(str));
+	// Initially file extension is ".tmp". When call is over, it changes to ".txt".
+	char *path_chars = rand_affixed_str(rand_bytes, "/tmp/rtpengine-meta-", ".tmp");
+	meta_filepath = str_init(meta_filepath, path_chars);
+	c->meta_filepath = meta_filepath;
+	FILE *mfp = fopen(meta_filepath->s, "w");
+	if (mfp == NULL) {
+		ilog(LOG_ERROR, "Could not open metadata file: %s", meta_filepath->s);
+		free(c->meta_filepath->s);
+		free(c->meta_filepath);
+		c->meta_filepath = NULL;
+	}
+	c->meta_fp = mfp;
+
 	return c;
 }
 

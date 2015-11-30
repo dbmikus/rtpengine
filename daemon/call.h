@@ -420,6 +420,8 @@ struct call {
 	unsigned char		tos;
 	char			*created_from;
 	sockaddr_t		created_from_addr;
+	str			*meta_filepath;
+	FILE		*meta_fp;
 	str			*metadata;
 };
 
