@@ -2839,7 +2839,7 @@ void setup_recording_files(struct call *call, struct call_monologue *monologue) 
 	    && monologue->recording_pd == NULL && monologue->recording_pdumper == NULL) {
 		int rand_bytes = 16;
 		str *recording_path = malloc(sizeof(str));
-		char *path_chars = rand_affixed_str(rand_bytes, "/tmp/", ".pcap");
+		char *path_chars = rand_affixed_str(rand_bytes, "/var/spool/rtpengine/recordings/", ".pcap");
 
 		recording_path = str_init(recording_path, path_chars);
 		monologue->recording_path = recording_path;
