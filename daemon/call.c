@@ -2775,7 +2775,7 @@ out:
 void setup_recording_files(struct call *call, struct call_monologue *monologue) {
 	if (call->record_call
 	    && monologue->recording_pd == NULL && monologue->recording_pdumper == NULL) {
-    char rec_path_prefix[16];
+		char rec_path_prefix[16];
 		char recording_path[21];
 		/*
 		 *
