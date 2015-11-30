@@ -132,7 +132,7 @@ static void __monologue_destroy(struct call_monologue *monologue);
 static int monologue_destroy(struct call_monologue *ml);
 
 /* Generate a random PCAP filepath to write recorded RTP stream. */
-void setup_recording_files(struct call *call, struct call_monologue *monologue);
+str *setup_recording_file(struct call *call, struct call_monologue *monologue);
 /* Generates a random string sandwiched between affixes. */
 char *rand_affixed_str(int num_bytes, char *prefix, char *suffix);
 /* Generates a hex string representing n random bytes. len(rand_str) = 2*num_bytes + 1 */
@@ -1500,7 +1500,10 @@ int monologue_offer_answer(struct call_monologue *other_ml, GQueue *streams,
 
 	ml_media = other_ml_media = NULL;
 
-	setup_recording_files(call, monologue);
+	str *pcap_path = setup_recording_file(call, monologue);
+	if (pcap_path != NULL) {
+		fprintf(call->meta_fp, "%s\n", pcap_path->s);
+	}
 
 	for (media_iter = streams->head; media_iter; media_iter = media_iter->next) {
 		sp = media_iter->data;
@@ -2834,11 +2837,12 @@ out:
 /**
  * Generate a random PCAP filepath to write recorded RTP stream.
  */
-void setup_recording_files(struct call *call, struct call_monologue *monologue) {
+str *setup_recording_file(struct call *call, struct call_monologue *monologue) {
+	str *recording_path = NULL;
 	if (call->record_call
 	    && monologue->recording_pd == NULL && monologue->recording_pdumper == NULL) {
 		int rand_bytes = 16;
-		str *recording_path = malloc(sizeof(str));
+		recording_path = malloc(sizeof(str));
 		char *path_chars = rand_affixed_str(rand_bytes, "/var/spool/rtpengine/recordings/", ".pcap");
 
 		recording_path = str_init(recording_path, path_chars);
@@ -2849,9 +2853,12 @@ void setup_recording_files(struct call *call, struct call_monologue *monologue) 
 		monologue->recording_pd = pcap_open_dead(DLT_RAW, 65535);
 		monologue->recording_pdumper = pcap_dump_open(monologue->recording_pd, recording_path);
 	} else {
+		monologue->recording_path = NULL;
 		monologue->recording_pd = NULL;
 		monologue->recording_pdumper = NULL;
 	}
+
+	return recording_path;
 }
 
 /**
