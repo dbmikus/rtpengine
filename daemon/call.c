@@ -1495,7 +1495,7 @@ int monologue_offer_answer(struct call_monologue *other_ml, GQueue *streams,
 	ml_media = other_ml_media = NULL;
 
 	str *pcap_path = setup_recording_file(call, monologue);
-	if (pcap_path != NULL) {
+	if (pcap_path != NULL && call->meta_fp != NULL) {
 		fprintf(call->meta_fp, "%s\n", pcap_path->s);
 	}
 
