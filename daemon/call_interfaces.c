@@ -696,7 +696,10 @@ static const char *call_offer_answer_ng(bencode_item_t *input, struct callmaster
 			call->record_call = 1;
 		}
 		bencode_dictionary_get_str(input, "metadata", &metadata);
-		call->metadata = str_dup(&metadata);
+		if (metadata) {
+			free(call->metadata);
+			call->metadata = str_dup(&metadata);
+		}
 	} else {
 		call->record_call = 0;
 	}
