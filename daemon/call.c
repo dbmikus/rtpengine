@@ -2256,8 +2256,6 @@ static struct call *call_create(const str *callid, struct callmaster *m) {
 	c->dtls_cert = dtls_cert();
 	c->tos = m->conf.default_tos;
 
-	setup_meta_file(c);
-
 	return c;
 }
 

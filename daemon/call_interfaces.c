@@ -686,15 +686,17 @@ static const char *call_offer_answer_ng(bencode_item_t *input, struct callmaster
 
 	call = call_get_opmode(&callid, m, opmode);
 
-	bencode_dictionary_get_str(input, "metadata", &metadata);
-	call->metadata = str_dup(&metadata);
-
 	errstr = "Unknown call-id";
 	if (!call)
 		goto out;
 
 	if (recordcall.s && !str_cmp(&recordcall, "yes")) {
-		call->record_call = 1;
+		if (!call->record_call) {
+			setup_meta_file(call);
+			call->record_call = 1;
+		}
+		bencode_dictionary_get_str(input, "metadata", &metadata);
+		call->metadata = str_dup(&metadata);
 	} else {
 		call->record_call = 0;
 	}
