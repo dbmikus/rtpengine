@@ -84,6 +84,7 @@ static enum xmlrpc_format xmlrpc_fmt = XF_SEMS;
 static int num_threads;
 static int delete_delay = 30;
 static int graphite_interval = 0;
+static char *spooldir;
 
 static void sighandler(gpointer x) {
 	sigset_t ss;
@@ -278,6 +279,7 @@ static void options(int *argc, char ***argv) {
 		{ "sip-source",  0,  0, G_OPTION_ARG_NONE,	&sip_source,	"Use SIP source address by default",	NULL	},
 		{ "dtls-passive", 0, 0, G_OPTION_ARG_NONE,	&dtls_passive_def,"Always prefer DTLS passive role",	NULL	},
 		{ "max-sessions", 0, 0, G_OPTION_ARG_INT,	&max_sessions,	"Limit of maximum number of sessions",	NULL	},
+		{ "recording-dir", 0, 0, G_OPTION_ARG_STRING,	&spooldir,	"Directory for storing recordings and metadata files", "FILE"	},
 		{ NULL, }
 	};
 
@@ -452,7 +454,7 @@ static void init_everything() {
 
 	socket_init();
 	log_init();
-	fs_init("/var/spool/rtpengine");
+	fs_init(spooldir);
 	clock_gettime(CLOCK_REALTIME, &ts);
 	srandom(ts.tv_sec ^ ts.tv_nsec);
 	SSL_library_init();
