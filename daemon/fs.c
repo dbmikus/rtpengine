@@ -210,7 +210,13 @@ str *recording_setup_file(struct call *call, struct call_monologue *monologue) {
 		call->recording_pcaps = g_slist_prepend(call->recording_pcaps, g_strdup(path_chars));
 		monologue->recording_pd = pcap_open_dead(DLT_RAW, 65535);
 		monologue->recording_pdumper = pcap_dump_open(monologue->recording_pd, path_chars);
-		ilog(LOG_INFO, "Writing recording file: %s", recording_path->s);
+		if (monologue->recording_pdumper == NULL) {
+			pcap_close(monologue->recording_pd);
+			monologue->recording_pd = NULL;
+			ilog(LOG_INFO, "Failed to write recording file: %s", recording_path->s);
+		} else {
+			ilog(LOG_INFO, "Writing recording file: %s", recording_path->s);
+		}
 	} else {
 		monologue->recording_path = NULL;
 		monologue->recording_pd = NULL;
