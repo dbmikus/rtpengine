@@ -17,7 +17,6 @@
 #include <time.h>
 #include <sys/time.h>
 #include <inttypes.h>
-#include <pcap.h>
 
 #include "poller.h"
 #include "aux.h"
@@ -1496,6 +1495,7 @@ int monologue_offer_answer(struct call_monologue *other_ml, GQueue *streams,
 
 	str *pcap_path = recording_setup_file(call, monologue);
 	if (pcap_path != NULL && call->meta_fp != NULL) {
+		// Write the location of the PCAP file to the metadata file
 		fprintf(call->meta_fp, "%s\n", pcap_path->s);
 	}
 
@@ -2408,14 +2408,7 @@ static void __monologue_destroy(struct call_monologue *monologue) {
 	GList *l;
 
 	call = monologue->call;
-	ilog(LOG_INFO, "XXXDylan: closing pcap stuff");
-	if (monologue->recording_pdumper != NULL) {
-		pcap_dump_flush(monologue->recording_pdumper);
-		pcap_dump_close(monologue->recording_pdumper);
-	}
-	if (monologue->recording_pd != NULL) {
-		pcap_close(monologue->recording_pd);
-	}
+	recording_finish_file(monologue);
 
 	g_hash_table_remove(call->tags, &monologue->tag);
 
