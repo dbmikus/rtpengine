@@ -48,11 +48,11 @@ void fs_init(char *spoolpath) {
 /**
  * Sets up the spool directory for RTP Engine.
  * If the directory does not exist, return FALSE.
- * If the directory exists, but "$spoolpath/metadata" or "$spoolpath/recordings"
+ * If the directory exists, but "$spoolpath/metadata" or "$spoolpath/pcaps"
  * exist as non-directory files, return FALSE.
  * Otherwise, return TRUE.
  *
- * Create the "metadata" and "recordings" directories if they are not there.
+ * Create the "metadata" and "pcaps" directories if they are not there.
  */
 int maybe_create_spool_dir(char *spoolpath) {
 	struct stat info;
@@ -68,23 +68,23 @@ int maybe_create_spool_dir(char *spoolpath) {
 		// Spool directory exists. Make sure it has inner directories.
 		int path_len = strlen(spoolpath);
 		char meta_path[path_len + 10];
-		char rec_path[path_len + 12];
+		char rec_path[path_len + 7];
 		snprintf(meta_path, path_len + 10, "%s/metadata", spoolpath);
-		snprintf(rec_path, path_len + 12, "%s/recordings", spoolpath);
+		snprintf(rec_path, path_len + 7, "%s/pcaps", spoolpath);
 
 		if (stat(meta_path, &info) != 0) {
 			fprintf(stdout, "Creating metadata directory \"%s\".\n", meta_path);
 			mkdir(meta_path, 0660);
 		} else if(!S_ISDIR(info.st_mode)) {
-			fprintf(stderr, "Metadata file exists, but \"%s\" is not a directory.\n", meta_path);
+			fprintf(stderr, "metadata file exists, but \"%s\" is not a directory.\n", meta_path);
 			spool_good = FALSE;
 		}
 
 		if (stat(rec_path, &info) != 0) {
-			fprintf(stdout, "Creating recordings directory \"%s\".\n", rec_path);
+			fprintf(stdout, "Creating pcaps directory \"%s\".\n", rec_path);
 			mkdir(rec_path, 0660);
 		} else if(!S_ISDIR(info.st_mode)) {
-			fprintf(stderr, "Recordings file exists, but \"%s\" is not a directory.\n", rec_path);
+			fprintf(stderr, "pcaps file exists, but \"%s\" is not a directory.\n", rec_path);
 			spool_good = FALSE;
 		}
 	}
@@ -188,9 +188,9 @@ str *recording_setup_file(struct call *call, struct call_monologue *monologue) {
       && call->record_call
 	    && monologue->recording_pd == NULL && monologue->recording_pdumper == NULL) {
 		int rand_bytes = 16;
-		int rec_path_len = strlen(spooldir) + 13; // spool directory path + "/recordings/"
+		int rec_path_len = strlen(spooldir) + 8; // spool directory path + "/pcaps/"
 		char rec_path[rec_path_len];
-		snprintf(rec_path, rec_path_len, "%s/recordings/", spooldir);
+		snprintf(rec_path, rec_path_len, "%s/pcaps/", spooldir);
 		char *path_chars = rand_affixed_str(rand_bytes, rec_path, ".pcap");
 
 		recording_path = malloc(sizeof(str));
