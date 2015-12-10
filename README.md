@@ -742,7 +742,7 @@ Optionally included keys are:
 	__run the above algorithm__!
 
 	Round robin for both legs of the stream:
-		{ ..., "direction": [ "round-robin-calls", "round-robin-calls" ], ... } 
+		{ ..., "direction": [ "round-robin-calls", "round-robin-calls" ], ... }
 
 	Round robin for first leg and and select "pub" for the second leg of the stream:
 		{ ..., "direction": [ "round-robin-calls", "pub" ], ... }
@@ -867,6 +867,29 @@ Optionally included keys are:
 
 		Negates the respective option. This is useful if one of the session parameters was offered by
 		an SDES endpoint, but it should not be offered on the far side if this endpoint also speaks SDES.
+
+* `record-call`
+
+	Contains either the string "yes" or the string "no". This tells the rtpengine
+	whether or not to record the call to PCAP files. If the call is recorded, it
+	will generate PCAP files for each stream and a metadata file for each call.
+
+	See the `--recording-dir` option above.
+
+	Note that this is not a duplication of the `start_recording` message. If calls
+	are being kernelized, then they cannot be recorded. The `start_recording`
+	message does not have a way to prevent a call from being kernelized, so we need
+	to use this flag when we send an `offer` or `answer` message.
+
+* `metadata`
+
+	This is a generic metadata string. The metadata will be written to the bottom of
+	metadata files within `/path/to/recording_dir/metadata/`. This can be used to
+	record additional information about recorded calls. `metadata` values passed in
+	through subsequent messages will overwrite previous metadata values.
+
+	See the `--recording-dir` option above.
+
 
 An example of a complete `offer` request dictionary could be (SDP body abbreviated):
 
