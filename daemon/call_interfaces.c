@@ -714,7 +714,7 @@ static const char *call_offer_answer_ng(bencode_item_t *input, struct callmaster
 	bencode_buffer_destroy_add(output->buffer, (free_func_t) sdp_chopper_destroy, chopper);
 
 	bencode_dictionary_get_str(input, "record-call", &recordcall);
-	if (opmode == OP_ANSWER && recordcall.s) {
+	if (recordcall.s) {
 		detect_setup_recording(call, recordcall);
 	}
 
@@ -747,7 +747,7 @@ static const char *call_offer_answer_ng(bencode_item_t *input, struct callmaster
 	bencode_dictionary_add_string(output, "result", "ok");
 
 	struct recording *recording = call->recording;
-	if (opmode == OP_ANSWER && call->record_call && recording != NULL && recording->meta_fp != NULL) {
+	if (call->record_call && recording != NULL && recording->meta_fp != NULL) {
 		struct iovec *iov = &g_array_index(chopper->iov, struct iovec, 0);
 		int iovcnt = chopper->iov_num;
 		meta_write_sdp(recording->meta_fp, iov, iovcnt);
