@@ -1013,6 +1013,26 @@ noop:
 
 /* XXX split this function into pieces */
 /* called lock-free */
+/**
+ * Incoming packets:
+ * - sfd->socket.local: the local IP/port on which the packet arrived
+ * - sfd->stream->endpoint: adjusted/learned IP/port from where the packet
+ *   was sent
+ * - sfd->stream->advertised_endpoint: the unadjusted IP/port from where the
+ *   packet was sent. These are the values present in the SDP
+ *
+ * Outgoing packets:
+ * - sfd->stream->rtp_sink->endpoint: the destination IP/port
+ * - sfd->stream->selected_sfd->socket.local: the local source IP/port for the
+ *   outgoing packet
+ *
+ * If the rtpengine runs behind a NAT and local addresses are configured with
+ * different advertised endpoints, the SDP would not contain the address from
+ * `...->socket.local`, but rather from `sfd->local_intf->spec->address.advertised`
+ * (of type `sockaddr_t`). The port will be the same.
+ */
+/* TODO move the above comments to the data structure definitions, if the above
+ * always holds true */
 static int stream_packet(struct stream_fd *sfd, str *s, const endpoint_t *fsin) {
 	struct packet_stream *stream,
 			     *sink = NULL,
